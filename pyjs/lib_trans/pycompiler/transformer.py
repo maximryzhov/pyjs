@@ -37,8 +37,8 @@ import pytoken as token
 class WalkerError(Exception):
     pass
 
-from compiler.consts import CO_VARARGS, CO_VARKEYWORDS
-from compiler.consts import OP_ASSIGN, OP_DELETE, OP_APPLY
+from .consts import CO_VARARGS, CO_VARKEYWORDS
+from .consts import OP_ASSIGN, OP_DELETE, OP_APPLY
 
 def parseFile(path):
     f = open(path, "U")
@@ -771,7 +771,21 @@ class Transformer:
 
     def atom_number(self, nodelist):
         ### need to verify this matches compile.c
-        k = eval(nodelist[0].value)
+        val = nodelist[0].value
+
+        # strip leading zeros, except for hex and float
+        if len(val) > 1 and val[0] == '0':
+            if val[1] not in ('.', 'x'):
+                val = val.lstrip('0')
+        
+        # strip L from long integers
+        val = val.rstrip('L')
+        if val:
+            k = eval(val)
+        
+        # account for empty string
+        else:
+            k = 0
         return Const(k, lineno=nodelist[0].context)
 
     def decode_literal(self, lit):

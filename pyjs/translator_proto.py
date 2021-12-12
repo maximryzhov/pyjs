@@ -613,7 +613,7 @@ class __Pyjamas__(object):
                     "jsimport function only supports constant string arguments",
                 node.node)
             option = arg.value
-            if translator.decorator_compiler_options.has_key(option):
+            if option in translator.decorator_compiler_options:
                 for var, val in translator.decorator_compiler_options[option]:
                     setattr(translator, var, val)
             elif option == "Speed":
@@ -976,7 +976,7 @@ class Translator(object):
 
     def set_compile_options(self, opts):
         opts = dict(all_compile_options, **opts)
-        for opt, value in opts.iteritems():
+        for opt, value in opts.items():
             if opt in all_compile_options:
                 setattr(self, opt, value)
             else:
@@ -998,14 +998,14 @@ class Translator(object):
         assert(isinstance(newline, bool))
         if newline:
             if txt is None:
-                print >> self.output
+                print('', file=self.output)
                 return
-            print >> self.output, txt
+            print(txt, file=self.output)
         else:
-            print >> self.output, txt,
+            print(txt, file=self.output)
 
     def uniqid(self, prefix = ""):
-        if not self.__unique_ids__.has_key(prefix):
+        if prefix not in self.__unique_ids__:
             self.__unique_ids__[prefix] = 0
         self.__unique_ids__[prefix] += 1
         return "%s%d" % (prefix, self.__unique_ids__[prefix])
@@ -1180,7 +1180,7 @@ class Translator(object):
         if self.local_prefix is not None:
             if jsname.find(self.local_prefix) != 0:
                 jsname = self.jsname(name_type, "%s.%s" % (self.local_prefix, jsname))
-        if self.lookup_stack[depth].has_key(pyname):
+        if pyname in self.lookup_stack[depth]:
             name_type = self.lookup_stack[depth][pyname][0]
         if self.module_name != 'pyjslib' or pyname != 'int':
             self.lookup_stack[depth][pyname] = (name_type, pyname, jsname)
@@ -1197,7 +1197,7 @@ class Translator(object):
         jsname = None
         max_depth = depth = len(self.lookup_stack) - 1
         while depth >= 0:
-            if self.lookup_stack[depth].has_key(name):
+            if name in self.lookup_stack[depth]:
                 name_type, pyname, jsname = self.lookup_stack[depth][name]
                 break
             depth -= 1
@@ -1213,7 +1213,7 @@ class Translator(object):
                     if pyname in ['int', 'long']:
                         name = 'float_int'
                 jsname = self.jsname("variable", "$p['%s']" % self.attrib_remap(name))
-            elif PYJSLIB_BUILTIN_MAPPING.has_key(name):
+            elif name in PYJSLIB_BUILTIN_MAPPING:
                 name_type = 'builtin'
                 pyname = name
                 jsname = PYJSLIB_BUILTIN_MAPPING[name]
@@ -1234,7 +1234,7 @@ class Translator(object):
         """
         l = escaped_subst.split(txt)
         txt = l[0]
-        for i in xrange(1, len(l)-1, 2):
+        for i in range(1, len(l)-1, 2):
             varname = l[i].strip()
             if varname.startswith('!'):
                     txt += varname[1:]
@@ -1270,10 +1270,10 @@ class Translator(object):
         lines = []
         module_prefix = self.module_prefix[:-1]
         remap = pyjs_attrib_remap.keys()
-        remap.sort()
+        remap = sorted(remap)
         lines.append("%(s)svar attrib_remap = %(module_prefix)s['attrib_remap'] = %(remap)s;" % locals())
         remap = pyjs_vars_remap.keys()
-        remap.sort()
+        remap = sorted(remap)
         lines.append("%(s)svar var_remap = %(module_prefix)s['var_remap'] = %(remap)s;" % locals())
         return "\n".join(lines)
 
@@ -1422,7 +1422,7 @@ class Translator(object):
         return "%(e)s['__getitem__'](%(i)s)" % locals()
 
     def md5(self, node):
-        return md5(self.module_name + str(node.lineno) + repr(node)).hexdigest()
+        return md5(self.module_name.encode('utf-8') + str(node.lineno).encode('utf-8') + repr(node).encode('utf-8')).hexdigest()
 
     def track_lineno(self, node, module=False):
         if self.source_tracking and node.lineno:
@@ -2131,7 +2131,7 @@ var %s = arguments['length'] >= %d ? arguments[arguments['length']-1] : argument
                         self.add_lookup("__pyjamas__", ass_name, name[0])
                     else:
                         self.add_lookup("__pyjamas__", ass_name, jsname)
-                except AttributeError, e:
+                except AttributeError as e:
                     #raise TranslationError("Unknown __pyjamas__ import: %s" % name, node)
                     pass
             return
@@ -2386,11 +2386,11 @@ var %s = arguments['length'] >= %d ? arguments[arguments['length']-1] : argument
                     else:
                         raw_js = self.translate_escaped_names(raw_js, current_klass)
                     return raw_js
-                except AttributeError(e):
+                except AttributeError as e:
                     raise TranslationError(
                         "Unknown __pyjamas__ function %s" % pyname,
                          v.node, self.module_name)
-                except TranslationError(e):
+                except TranslationError as e:
                     raise TranslationError(e.msg, v, self.module_name)
             elif v.node.name == 'locals':
                 return """$p['dict']({%s})""" % (",".join(["'%s': %s" % (pyname, self.lookup_stack[-1][pyname][2]) for pyname in self.lookup_stack[-1] if self.lookup_stack[-1][pyname][0] not in ['__pyjamas__', 'global']]))
@@ -3830,7 +3830,7 @@ var %(e)s_name = (typeof %(e)s['__name__'] == 'undefined' ? %(e)s['name'] : %(e)
                 return str(node.value)
             self.constant_int[node.value] = 1
             return "$constant_int_%s" % str(node.value)
-        elif isinstance(node.value, long):
+        elif isinstance(node.value, int):
             v = str(node.value)
             if v[-1] == 'L':
                 v = v[:-1]
@@ -3840,9 +3840,9 @@ var %(e)s_name = (typeof %(e)s['__name__'] == 'undefined' ? %(e)s['name'] : %(e)
             return "$constant_long_%s" % v
         elif isinstance(node.value, float):
             return str(node.value)
-        elif isinstance(node.value, basestring):
+        elif isinstance(node.value, str):
             v = node.value
-            if isinstance(node.value, unicode):
+            if isinstance(node.value, str):
                 v = v.encode('utf-8')
             return uescapejs(node.value)
         elif node.value is None:
@@ -3955,7 +3955,7 @@ var %(e)s_name = (typeof %(e)s['__name__'] == 'undefined' ? %(e)s['name'] : %(e)
 %(s)s\t@{{op_mul}}(%(v1)s,%(v2)s))""" % locals()
 
     def _mod(self, node, current_klass):
-        if isinstance(node.left, self.ast.Const) and isinstance(node.left.value, types.StringType):
+        if isinstance(node.left, self.ast.Const) and isinstance(node.left.value, str):
             return self.track_call("@{{sprintf}}("+self.expr(node.left, current_klass) + ", " + self.expr(node.right, current_klass)+")", node.lineno)
 
         e1 = self.expr(node.left, current_klass)
@@ -4422,7 +4422,7 @@ var %(e)s_name = (typeof %(e)s['__name__'] == 'undefined' ? %(e)s['name'] : %(e)
 def translate(sources, output_file, module_name=None, **kw):
     kw = dict(all_compile_options, **kw)
     list_imports = kw.get('list_imports', False)
-    sources = map(os.path.abspath, sources)
+    sources = list(map(os.path.abspath, sources))
     if not module_name:
         module_name, extension = os.path.splitext(os.path.basename(sources[0]))
 
@@ -4431,7 +4431,7 @@ def translate(sources, output_file, module_name=None, **kw):
     for src in sources:
         current_tree = compiler.parseFile(src)
         flags = set()
-        f = file(src)
+        f = open(src)
         for l in f:
             if l.startswith('#@PYJS_'):
                 flags.add(l.strip()[7:])
@@ -4441,7 +4441,7 @@ def translate(sources, output_file, module_name=None, **kw):
         else:
             tree = current_tree
     #XXX: if we have an override the sourcefile and the tree is not the same!
-    f = file(sources[0], "r")
+    f = open(sources[0], "r")
     src = f.read()
     f.close()
     if list_imports:
@@ -4454,7 +4454,7 @@ def translate(sources, output_file, module_name=None, **kw):
     elif output_file == '-':
         output = sys.stdout
     else:
-        output = file(output_file, 'w')
+        output = open(output_file, 'w')
 
     t = Translator(compiler,
                    module_name, sources[0], src, tree, output, **kw)

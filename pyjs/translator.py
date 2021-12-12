@@ -45,7 +45,7 @@ def main():
     if options.output != '-':
         options.output = os.path.abspath(options.output)
 
-    file_names = map(os.path.abspath, args)
+    file_names = list(map(os.path.abspath, args))
     for fn in file_names:
         if not os.path.isfile(fn):
             print >> sys.stderr, "Input file not found %s" % fn
