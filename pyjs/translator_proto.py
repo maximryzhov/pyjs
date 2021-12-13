@@ -4454,7 +4454,7 @@ def translate(sources, output_file, module_name=None, **kw):
     elif output_file == '-':
         output = sys.stdout
     else:
-        output = open(output_file, 'w')
+        output = open(output_file, 'w', encoding='utf-8')
 
     t = Translator(compiler,
                    module_name, sources[0], src, tree, output, **kw)
